@@ -45,7 +45,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class Restaurant(models.Model):
-    restaurant_name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100)
     address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True)
     slug = models.SlugField(unique=True, blank=True)
 
@@ -54,7 +54,7 @@ class Restaurant(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(self.restaurant_name)
+            base_slug = slugify(self.name)
             slug = base_slug
             counter = 1
 
