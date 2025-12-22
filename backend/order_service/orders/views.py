@@ -1,10 +1,17 @@
 from rest_framework import viewsets, permissions
 
-from .models import Product, Restaurant
-from .serializers import RestaurantSerializer, ProductSerializer
+from .models import User, Product, Restaurant
+from .serializers import UserSerializer, RestaurantSerializer, ProductSerializer
 
 
 # Create your views here.
+
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet to list all users"""
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class RestaurantViewSet(viewsets.ModelViewSet):
@@ -12,7 +19,7 @@ class RestaurantViewSet(viewsets.ModelViewSet):
 
     queryset = Restaurant.objects.all()
     serializer_class = RestaurantSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
 
 class ProductViewSet(viewsets.ModelViewSet):

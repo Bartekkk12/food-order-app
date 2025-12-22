@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from orders.models import *
+from ..models import *
 
 # Models tests
 
@@ -102,9 +102,234 @@ class UserTestCase(TestCase):
         self.assertIsNotNone(self.user.updated_at)
 
     def test_update_user(self):
-        # Test for updating the updated_at field
+        # Test for the correct updating user
         old_updated_at = self.user.updated_at
         self.user.name = 'Mike'
         self.user.save()
         self.assertNotEqual(self.user.updated_at, old_updated_at)
         self.assertEqual(self.user.name, 'Mike')
+
+
+class RestaurantTestCase(TestCase):
+    """Test case for Restaurant model."""
+    def setUp(self):
+        # Create address
+        self.address = Address.objects.create(
+            country='US',
+            city='New York',
+            zip_code='12345',
+            street='Smith st.',
+            house_number='12',
+            apartment_number='1',
+        )
+
+    def test_restaurant_creation(self):
+        # Test for correct restaurant creation
+        self.restaurant = Restaurant.objects.create(
+            name='Restaurant Name',
+            address=self.address,
+        )
+        self.assertEqual(self.restaurant.name, 'Restaurant Name')
+        self.assertEqual(self.restaurant.address, self.address)
+        self.assertIsNotNone(self.restaurant.slug)
+
+    def test_slug_creation(self):
+        # Test for correct slug creation
+        restaurant1 = Restaurant.objects.create(name='Restaurant Name')
+        self.assertEqual(restaurant1.slug, 'restaurant-name')
+
+        restaurant2 = Restaurant.objects.create(name='Restaurant Name')
+        self.assertEqual(restaurant2.slug, 'restaurant-name-1')
+
+    def test_null_address(self):
+        # Test for the optional address field
+        restaurant = Restaurant.objects.create(name='Restaurant')
+        self.assertIsNone(restaurant.address)
+
+    def test_created_and_updated_at(self):
+        # Test created and updated at fields
+        restaurant = Restaurant.objects.create(
+            name='Restaurant with Time',
+            address=self.address,
+        )
+        self.assertIsNotNone(restaurant.created_at)
+        self.assertIsNotNone(restaurant.updated_at)
+
+    def test_update_restaurant(self):
+        # Test for the correct updating restaurant
+        restaurant = Restaurant.objects.create(name='Restaurant')
+        old_updated_at = restaurant.updated_at
+        restaurant.name = 'New Name'
+        restaurant.save()
+        self.assertNotEqual(restaurant.updated_at, old_updated_at)
+        self.assertEqual(restaurant.name, 'New Name')
+
+
+class ProductTestCase(TestCase):
+    def setUp(self):
+        # Create address
+        self.address = Address.objects.create(
+            country='US',
+            city='New York',
+            zip_code='12345',
+            street='Smith st.',
+            house_number='12',
+            apartment_number='1',
+        )
+        self.restaurant = Restaurant.objects.create(
+            name='Restaurant Name',
+            address=self.address,
+        )
+
+    def test_product_creation(self):
+        # Test for correct product creation
+        product = Product.objects.create(
+            name='Product Name',
+            price=20.99,
+            restaurant=self.restaurant,
+        )
+        self.assertEqual(product.name, 'Product Name')
+        self.assertEqual(product.price, 20.99)
+        self.assertEqual(product.restaurant, self.restaurant)
+        self.assertIsNotNone(product.slug)
+
+    def test_slug_creation(self):
+        # Test for correct slug creation
+        product1 = Product.objects.create(
+            name='Product Name',
+            price=20.99,
+            restaurant=self.restaurant,
+        )
+        self.assertEqual(product1.slug, 'product-name')
+
+        product2 = Product.objects.create(
+            name='Product Name',
+            price=20.99,
+            restaurant=self.restaurant,
+        )
+        self.assertEqual(product2.slug, 'product-name-1')
+
+    def test_created_and_updated_at(self):
+        # Test created and updated at fields
+        product = Product.objects.create(
+            name='Product Name',
+            price=20.99,
+            restaurant=self.restaurant,
+        )
+        self.assertIsNotNone(product.created_at)
+        self.assertIsNotNone(product.updated_at)
+
+    def test_update_product(self):
+        # Test for the correct updating product
+        product = Product.objects.create(
+            name='Product Name',
+            price=20.99,
+            restaurant=self.restaurant,
+        )
+        old_updated_at = product.updated_at
+        product.name = 'New Name'
+        product.save()
+        self.assertNotEqual(product.updated_at, old_updated_at)
+
+
+class OrderTestCase(TestCase):
+    def setUp(self):
+        # Create user
+        self.user = User.objects.create(
+            name='Jake',
+            surname='Smith',
+            email='smith@email.com',
+            password='password1',
+            phone_number='1234567890',
+        )
+
+    def test_order_creation(self):
+        # Test for the correct order creation
+        order = Order.objects.create(user=self.user)
+        self.assertEqual(order.user, self.user)
+
+    def test_created_at_field(self):
+        # Test created at field
+        order = Order.objects.create(user=self.user)
+        self.assertIsNotNone(order.created_at)
+
+
+class OrderProductsTestCase(TestCase):
+    # Create objects
+    def setUp(self):
+        self.user = User.objects.create(
+            name='Jake',
+            surname='Smith',
+            email='smith@email.com',
+            password='password1',
+            phone_number='1234567890',
+        )
+        self.order = Order.objects.create(user=self.user)
+        self.address = Address.objects.create(
+            country='US',
+            city='New York',
+            zip_code='12345',
+            street='Smith st.',
+            house_number='12',
+            apartment_number='1',
+        )
+        self.restaurant = Restaurant.objects.create(
+            name='Restaurant Name',
+            address=self.address,
+        )
+        self.product = Product.objects.create(
+            name='Product Name',
+            price=20.99,
+            restaurant=self.restaurant,
+        )
+
+    def test_order_products_creation(self):
+        # Test for the correct order products creation
+        order_products = OrderProducts.objects.create(
+            order=self.order,
+            product=self.product,
+            quantity=2,
+        )
+        self.assertEqual(order_products.order, self.order)
+        self.assertEqual(order_products.product, self.product)
+        self.assertEqual(order_products.quantity, 2)
+    
+    def test_default_quantity(self):
+        # Test for the default quantity value
+        order_products = OrderProducts.objects.create(
+            order=self.order,
+            product=self.product,
+        )
+        self.assertEqual(order_products.quantity, 1)
+
+    def test_created_and_updated_at(self):
+        # Test for the created and updated at fields
+        order_products = OrderProducts.objects.create(
+            order=self.order,
+            product=self.product,
+            quantity=2,
+        )
+        self.assertIsNotNone(order_products.created_at)
+        self.assertIsNotNone(order_products.updated_at)
+
+    def test_update_order_products(self):
+        # Test for the correct updating order products
+        order_products = OrderProducts.objects.create(
+            order=self.order,
+            product=self.product,
+        )
+        old_updated_at = order_products.updated_at
+        order_products.quantity = 5
+        order_products.save()
+        self.assertNotEqual(order_products.updated_at, old_updated_at)
+        self.assertEqual(order_products.quantity, 5)
+
+    def test_get_total_price(self):
+        # Test get_total_price method
+        order_products = OrderProducts.objects.create(
+            order=self.order,
+            product=self.product,
+            quantity=2,
+        )
+        expected_total_price = 2 * 20.99
+        self.assertEqual(order_products.get_total_price(), expected_total_price)
