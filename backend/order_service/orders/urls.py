@@ -1,13 +1,9 @@
-from django.urls import include, path
-from rest_framework import routers
+from django.urls import path
 
-from .views import UserViewSet, RestaurantViewSet, ProductViewSet
-
-router = routers.DefaultRouter()
-router.register(r'users', UserViewSet)  # Returns users list
-router.register(r'restaurants', RestaurantViewSet)  # Returns restaurants list
-router.register(r'products', ProductViewSet)  # Returns products list
+from .views import AddressList, AddressDetail, UserList
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('addresses/', AddressList.as_view()),
+    path('address/<int:pk>/', AddressDetail.as_view()),
+    path('users/', UserList.as_view()),
 ]

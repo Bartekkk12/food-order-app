@@ -1,6 +1,12 @@
 from rest_framework import serializers
 
-from .models import User, Product, Restaurant
+from .models import Address, User, Product, Restaurant
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ['id', 'country', 'city', 'zip_code', 'street', 'house_number', 'apartment_number']
 
 
 class UserSerializer(serializers.ModelSerializer):
