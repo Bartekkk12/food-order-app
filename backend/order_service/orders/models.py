@@ -25,11 +25,12 @@ class Address(models.Model):
 
 class User(AbstractBaseUser, PermissionsMixin):
     username = None
+
+    email = models.EmailField(unique=True)
+
     name = models.CharField(max_length=100)
     surname = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20, unique=True)
-    address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True)
 
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -38,7 +39,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     updated_at = models.DateTimeField(auto_now=True)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['name', 'surname', 'phone_number']
+    REQUIRED_FIELDS = []
 
     objects = CustomUserManager()
 
@@ -46,9 +47,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
+class UserAddress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="addresses")
+    address = models.ForeignKey(Address, on_delete=models.CASCADE)
+    is_delete = models.BooleanField(default=False)
+
+
 class Restaurant(models.Model):
     name = models.CharField(max_length=100)
-    address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True)
+    address = models.ForeignKey(Address, on_delete=models.CASCADE)
     slug = models.SlugField(unique=True, blank=True, max_length=100)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -56,7 +63,8 @@ class Restaurant(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(self.name)
+            street = self.address.street if self.address else ''
+            base_slug = slugify(f"{self.name}-{street}")
             slug = base_slug
             counter = 1
 
