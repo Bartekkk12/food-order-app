@@ -1,9 +1,11 @@
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from .models import Address, User
-from .serializers import AddressSerializer, UserSerializer
+from django.shortcuts import get_object_or_404
+
+from .models import Address, User, Restaurant, Product
+from .serializers import AddressSerializer, UserSerializer, RestaurantSerializer, ProductSerializer
 
 
 # Create your views here.
@@ -11,10 +13,11 @@ from .serializers import AddressSerializer, UserSerializer
 
 class AddressList(APIView):
     """List all addresses, or create a new address."""
+
     def get(self, request):
         addresses = Address.objects.all()
         serializer = AddressSerializer(addresses, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = AddressSerializer(data=request.data)
@@ -26,19 +29,14 @@ class AddressList(APIView):
 
 class AddressDetail(APIView):
     """Retrieve, update or delete a address."""
-    def get_object(self, pk):
-        try:
-            return Address.objects.get(pk=pk)
-        except Address.DoesNotExist:
-            raise status.HTTP_404_NOT_FOUND
 
     def get(self, request, pk):
-        address = self.get_object(pk)
+        address = get_object_or_404(Address, pk=pk)
         serializer = AddressSerializer(address)
         return Response(serializer.data)
 
     def put(self, request, pk):
-        address = self.get_object(pk)
+        address = get_object_or_404(Address, pk=pk)
         serializer = AddressSerializer(address, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -46,14 +44,100 @@ class AddressDetail(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        address = self.get_object(pk)
+        address = get_object_or_404(Address, pk=pk)
         address.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserList(APIView):
     """List all users"""
+
     def get(self, request):
         users = User.objects.all()
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class RestaurantList(APIView):
+    """List all restaurants, or create a new restaurant."""
+
+    def get(self, request):
+        restaurants = Restaurant.objects.all()
+        serializer = RestaurantSerializer(restaurants, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = RestaurantSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RestaurantDetail(APIView):
+    """Retrieve, update or delete a restaurant."""
+
+    def get(self, request, pk):
+        restaurant = get_object_or_404(Restaurant, pk=pk)
+        serializer = RestaurantSerializer(restaurant)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        restaurant = get_object_or_404(Restaurant, pk=pk)
+        serializer = RestaurantSerializer(restaurant, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        restaurant = get_object_or_404(Restaurant, pk=pk)
+        restaurant.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RestaurantDetailBySlug(APIView):
+    """Retrieve a restaurant by slug"""
+
+    def get(self, request, slug):
+        restaurant = get_object_or_404(Restaurant, slug=slug)
+        serializer = RestaurantSerializer(restaurant)
+        return Response(serializer.data)
+
+
+class ProductList(APIView):
+    """List all products, or create a new product."""
+
+    def get(self, request):
+        products = Product.objects.all()
+        serializer = ProductSerializer(products, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = ProductSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductDetail(APIView):
+    """Retrieve, update or delete a product."""
+
+    def get(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        serializer = ProductSerializer(product)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        serializer = ProductSerializer(product, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        product.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
