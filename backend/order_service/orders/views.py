@@ -81,6 +81,30 @@ class RegisterUserView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class LoginUserView(APIView):
+    """Login a user."""
+
+    def post(self, request):
+        serializer = LoginUserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+
+        # Generate tokens
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+
+        return Response({
+            'refresh': str(access_token),
+            'access': access_token,
+            'user': {
+                'id': user.id,
+                'name': user.name,
+                'surname': user.surname,
+                'email': user.email,
+            }
+        }, status=status.HTTP_200_OK)
+
+
 class LogoutUserView(APIView):
     """Logout a user."""
     permission_classes = [IsAuthenticated]

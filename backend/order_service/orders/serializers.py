@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from rest_framework.validators import ValidationError
 
+from django.contrib.auth import authenticate
+
 from .models import Address, User, Product, Restaurant
 
 
@@ -39,6 +41,27 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
+
+
+class LoginUserSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+
+        if email and password:
+            user = authenticate(email=email, password=password)
+            if not user:
+                raise ValidationError({'email': 'Invalid email or password'})
+            if not user.is_active:
+                raise ValidationError('Your account is disabled')
+        else:
+            raise ValidationError({'email': 'Both email and password are required'})
+
+        attrs['user'] = user
+        return attrs
 
 
 class RestaurantSerializer(serializers.ModelSerializer):
