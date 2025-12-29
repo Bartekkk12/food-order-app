@@ -17,6 +17,7 @@ urlpatterns = [
     path('auth/refresh/', TokenRefreshView.as_view(), name='refresh'),
     path('auth/logout/', LogoutUserView.as_view(), name='logout'),
     path('auth/register/', RegisterUserView.as_view(), name='register'),
+    path('auth/me/', UserDetail.as_view(), name='auth-me'),
 
     # Restaurant paths
     path('restaurants/', RestaurantList.as_view(), name='restaurant-list'),

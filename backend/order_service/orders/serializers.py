@@ -16,6 +16,13 @@ class AddressSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
+        fields = ['id', 'name']
+        read_only_fields = ['id']
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
         fields = ['id', 'name', 'surname', 'email', 'phone_number']
         read_only_fields = ['id']
 

@@ -69,6 +69,28 @@ class UserList(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class UserDetail(APIView):
+    """Retrieve, update or delete a user if is authenticated."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = get_object_or_404(request.user)
+        serializer = UserDetailSerializer(user)
+
+        return Response(serializer.data)
+
+    def put(self, request):
+        user = get_object_or_404(request.user)
+        serializer = UserDetailSerializer(user, data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class RegisterUserView(APIView):
     """Register a new user."""
 
