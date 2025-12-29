@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
@@ -15,22 +15,50 @@ from .serializers import *
 # Create your views here.
 
 
-class AddressList(APIView):
-    """List all addresses, or create a new address."""
+class UserAddressList(APIView):
+    """List all user addresses, or create a new address."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        addresses = Address.objects.all()
-        serializer = AddressSerializer(addresses, many=True)
+        addresses = UserAddress.objects.filter(user=request.user)
+        serializer = UserAddressSerializer(addresses, many=True)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data)
 
     def post(self, request):
-        serializer = AddressSerializer(data=request.data)
+        serializer = CreateUserAddressSerializer(data=request.data)
+
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            address = serializer.save()
+            user_address = UserAddress.objects.create(user=request.user, address=address)
+            user_address_serializer = UserAddressSerializer(user_address)
+            return Response(user_address_serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserAddressDetail(APIView):
+    """Detail view of a user address."""
+
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, pk):
+        user_address = get_object_or_404(UserAddress, pk=pk, user=request.user)
+        serializer = AddressSerializer(user_address, data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(UserAddressSerializer(user_address).data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        user_address = get_object_or_404(UserAddress, pk=pk, user=request.user)
+        user_address.address.delete()
+        user_address.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AddressDetail(APIView):
@@ -203,6 +231,23 @@ class RestaurantDetailBySlug(APIView):
         serializer = RestaurantSerializer(restaurant)
 
         return Response(serializer.data)
+
+
+class RestaurantAddressDetail(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, pk):
+        restaurant = get_object_or_404(Restaurant, pk=pk)
+        serializer = RestaurantAddressSerializer(restaurant)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        restaurant = get_object_or_404(Restaurant, pk=pk)
+        serializer = RestaurantAddressSerializer(restaurant, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProductList(APIView):

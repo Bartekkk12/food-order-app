@@ -3,7 +3,7 @@ from rest_framework.validators import ValidationError
 
 from django.contrib.auth import authenticate
 
-from .models import Address, User, Product, Restaurant
+from .models import Address, User, UserAddress, Product, Restaurant
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -25,6 +25,20 @@ class UserDetailSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'name', 'surname', 'email', 'phone_number']
         read_only_fields = ['id']
+
+
+class UserAddressSerializer(serializers.ModelSerializer):
+    address = AddressSerializer()
+
+    class Meta:
+        model = UserAddress
+        fields = ['id', 'address']
+
+
+class CreateUserAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ['country', 'city', 'zip_code', 'street', 'house_number', 'apartment_number']
 
 
 class RegisterUserSerializer(serializers.ModelSerializer):
@@ -76,6 +90,14 @@ class RestaurantSerializer(serializers.ModelSerializer):
         model = Restaurant
         fields = ['id', 'name', 'address', 'slug']
         read_only_fields = ['id', 'slug']
+
+
+class RestaurantAddressSerializer(serializers.ModelSerializer):
+    address = AddressSerializer()
+
+    class Meta:
+        model = Restaurant
+        fields = ['id', 'address']
 
 
 class ProductSerializer(serializers.ModelSerializer):

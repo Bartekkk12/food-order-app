@@ -5,12 +5,10 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import *
 
 urlpatterns = [
-    # Address paths
-    path('addresses/', AddressList.as_view(), name='address-list'),
-    path('addresses/<int:pk>/', AddressDetail.as_view(), name='address-detail'),
-
     # User paths
     path('users/', UserList.as_view(), name='user-list'),
+    path('user/addresses/', UserAddressList.as_view(), name='user-address-list'),
+    path('user/addresses/<int:pk>/', UserAddressDetail.as_view(), name='user-address-detail'),
 
     # Auth paths
     path('auth/login/', LoginUserView.as_view(), name='login'),
@@ -23,6 +21,7 @@ urlpatterns = [
     path('restaurants/', RestaurantList.as_view(), name='restaurant-list'),
     path('restaurants/<int:pk>/', RestaurantDetail.as_view(), name='restaurant-detail'),
     path('restaurants/<slug:slug>/', RestaurantDetailBySlug.as_view(), name='restaurant-detail-slug'),
+    path('restaurants/<int:pk>/address/', RestaurantAddressDetail.as_view(), name='restaurant-address-detail'),
 
     # Product paths
     path('products/', ProductList.as_view(), name='product-list'),
