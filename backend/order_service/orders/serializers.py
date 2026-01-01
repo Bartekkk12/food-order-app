@@ -2,8 +2,9 @@ from rest_framework import serializers
 from rest_framework.validators import ValidationError
 
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
 
-from .models import Address, User, UserAddress, Product, Restaurant
+from .models import Address, User, UserAddress, Product, Restaurant, RestaurantAddress
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -49,10 +50,21 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['email', 'password', 'password_confirm', 'name', 'surname', 'phone_number']
 
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise ValidationError('User with this email already exists')
+        return value
+
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
-            raise ValidationError({'password': 'Passwords do not match'})
+            raise serializers.ValidationError({
+                "password_confirm": "Passwords must match."
+            })
         return attrs
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
 
     def create(self, validated_data):
         validated_data.pop('password_confirm')
@@ -88,16 +100,23 @@ class LoginUserSerializer(serializers.Serializer):
 class RestaurantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Restaurant
-        fields = ['id', 'name', 'address', 'slug']
+        fields = ['id', 'name', 'slug']
         read_only_fields = ['id', 'slug']
 
 
 class RestaurantAddressSerializer(serializers.ModelSerializer):
-    address = AddressSerializer()
+    address = AddressSerializer(read_only=True)
+    restaurant_name = serializers.CharField(source='restaurant.name', read_only=True)
 
     class Meta:
-        model = Restaurant
-        fields = ['id', 'address']
+        model = RestaurantAddress
+        fields = ['id', 'restaurant', 'restaurant_name', 'address']
+
+
+class CreateRestaurantAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ['country', 'city', 'zip_code', 'street', 'house_number', 'apartment_number']
 
 
 class ProductSerializer(serializers.ModelSerializer):

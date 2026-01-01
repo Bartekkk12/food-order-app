@@ -55,7 +55,6 @@ class UserAddress(models.Model):
 
 class Restaurant(models.Model):
     name = models.CharField(max_length=100)
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
     slug = models.SlugField(unique=True, blank=True, max_length=100)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -63,16 +62,35 @@ class Restaurant(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            street = self.address.street if self.address else ''
-            base_slug = slugify(f"{self.name}-{street}")
+            base_slug = slugify(self.name)
             slug = base_slug
             counter = 1
-
             while Restaurant.objects.filter(slug=slug).exists():
                 slug = f"{base_slug}-{counter}"
                 counter += 1
             self.slug = slug
         super().save(*args, **kwargs)
+
+    def update_slug_with_address(self, address):
+        base_slug = slugify(f"{self.name}-{address.street}")
+        slug = base_slug
+        counter = 1
+        while Restaurant.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        self.slug = slug
+        self.save(update_fields=['slug'])
+
+
+class RestaurantAddress(models.Model):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    address = models.ForeignKey(Address, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.restaurant.name} - {self.address}"
 
 
 class Product(models.Model):

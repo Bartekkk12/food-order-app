@@ -8,7 +8,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 
 from django.shortcuts import get_object_or_404
 
-from .models import Address, User, Restaurant, Product
+from .models import *
 from .serializers import *
 
 
@@ -33,6 +33,7 @@ class UserAddressList(APIView):
             address = serializer.save()
             user_address = UserAddress.objects.create(user=request.user, address=address)
             user_address_serializer = UserAddressSerializer(user_address)
+
             return Response(user_address_serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -49,6 +50,7 @@ class UserAddressDetail(APIView):
 
         if serializer.is_valid():
             serializer.save()
+
             return Response(UserAddressSerializer(user_address).data)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -114,6 +116,7 @@ class UserDetail(APIView):
 
         if serializer.is_valid():
             serializer.save()
+
             return Response(serializer.data)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -126,6 +129,7 @@ class RegisterUserView(APIView):
         serializer = RegisterUserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+
             return Response({'message': 'User registered successfully.'}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -233,21 +237,66 @@ class RestaurantDetailBySlug(APIView):
         return Response(serializer.data)
 
 
-class RestaurantAddressDetail(APIView):
-    permission_classes = [IsAdminUser]
+class RestaurantAddressList(APIView):
+    """List all addresses for a given restaurant, or create a new address."""
 
-    def get(self, request, pk):
-        restaurant = get_object_or_404(Restaurant, pk=pk)
-        serializer = RestaurantAddressSerializer(restaurant)
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        restaurant_id = request.query_params.get('restaurant')
+        if restaurant_id:
+            addresses = RestaurantAddress.objects.filter(restaurant_id=restaurant_id)
+        else:
+            addresses = RestaurantAddress.objects.all()
+
+        serializer = RestaurantAddressSerializer(addresses, many=True)
         return Response(serializer.data)
 
+    def post(self, request):
+        serializer = CreateRestaurantAddressSerializer(data=request.data)
+        if serializer.is_valid():
+            address = serializer.save()
+            restaurant_id = request.data.get('restaurant')
+            restaurant = get_object_or_404(Restaurant, pk=restaurant_id)
+            restaurant_address = RestaurantAddress.objects.create(restaurant=restaurant, address=address)
+            return Response(RestaurantAddressSerializer(restaurant_address).data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RestaurantAddressDetail(APIView):
+    """Detail view of a user address."""
+
+    permission_classes = [IsAuthenticated]
+
     def put(self, request, pk):
-        restaurant = get_object_or_404(Restaurant, pk=pk)
-        serializer = RestaurantAddressSerializer(restaurant, data=request.data)
+        restaurant_address = get_object_or_404(RestaurantAddress, pk=pk)
+        serializer = AddressSerializer(restaurant_address.address, data=request.data)
+
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+
+            return Response(RestaurantAddressSerializer(restaurant_address).data)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        restaurant_address = get_object_or_404(RestaurantAddress, pk=pk)
+        restaurant_address.address.delete()
+        restaurant_address.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RestaurantProductList(APIView):
+    """List all restaurant products"""
+
+    def get(self, request, slug):
+        restaurant = get_object_or_404(Restaurant, slug=slug)
+        products = Product.objects.filter(restaurant=restaurant)
+        serializer = ProductSerializer(products, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ProductList(APIView):
