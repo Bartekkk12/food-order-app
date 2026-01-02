@@ -143,16 +143,9 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='products')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
 
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def clean(self):
-        super().clean()
-        if self.quantity <= 0:
-            raise ValidationError({'quantity': 'Quantity must be greater than 0'})
-        if self.product.restaurant != self.order.restaurant:
-            raise ValidationError('Order must belong to same restaurant')
 
     def get_total_price(self):
-        return self.quantity * self.product.price
+        return self.quantity * self.price

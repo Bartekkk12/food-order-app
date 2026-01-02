@@ -3,8 +3,9 @@ from rest_framework.validators import ValidationError
 
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
+from django.shortcuts import get_object_or_404
 
-from .models import Address, User, UserAddress, Product, Restaurant, RestaurantAddress
+from .models import *
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -131,3 +132,59 @@ class ProductSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise ValidationError('Price cannot be negative')
         return value
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product', 'order', 'quantity']
+        read_only_fields = ['id']
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'user', 'items', 'total_price']
+        read_only_fields = ['id', 'user', 'total_price']
+
+
+class CreateOrderItemSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class CreateOrderSerializer(serializers.Serializer):
+    restaurant_id = serializers.IntegerField()
+    items = CreateOrderItemSerializer(many=True)
+
+    def validate(self, data):
+        restaurant = get_object_or_404(Restaurant, id=data['restaurant_id'])
+
+        for item in data['items']:
+            product = get_object_or_404(Product, id=item['product_id'])
+
+            if product.restaurant_id != restaurant.id:
+                raise ValidationError('All products must belong to this restaurant')
+
+        return data
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        restaurant = Restaurant.objects.get(id=validated_data['restaurant_id'])
+        items_data = validated_data['items']
+
+        order = Order.objects.create(user=user, restaurant=restaurant, total_price=0)
+        total_price = 0
+
+        for item in items_data:
+            product = Product.objects.get(id=item['product_id'])
+
+            order_item = OrderItem.objects.create(order=order, product=product, quantity=item['quantity'], price=product.price)
+            total_price += order_item.get_total_price()
+
+        order.total_price = total_price
+        order.save(update_fields=['total_price'])
+
+        return order

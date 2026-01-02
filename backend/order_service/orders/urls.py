@@ -30,4 +30,8 @@ urlpatterns = [
     path('products/<int:pk>/', ProductDetail.as_view(), name='product-detail'),
     path('products/<slug:restaurant_slug>/<slug:product_slug>/', ProductDetailBySlug.as_view(), name='product-detail-slug'),
 
+    # Order paths
+    path('orders/', UserOrdersList.as_view(), name='user-orders'),
+    path('orders/create', CreateOrderView.as_view(), name='create-order'),
+
 ]

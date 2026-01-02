@@ -356,3 +356,33 @@ class ProductDetailBySlug(APIView):
         serializer = ProductSerializer(product)
 
         return Response(serializer.data)
+
+
+class UserOrdersList(APIView):
+    """List all user orders"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        orders = Order.objects.filter(user=request.user)
+        serializer = OrderSerializer(orders, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CreateOrderView(APIView):
+    """Create a new order."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = CreateOrderSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
+
+        return Response({
+            'order_id': order.id,
+            'total_price': order.total_price,
+            'status': order.status
+            },
+            status=status.HTTP_201_CREATED
+        )
