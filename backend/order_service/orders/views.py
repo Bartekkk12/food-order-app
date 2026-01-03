@@ -9,9 +9,11 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import *
 from .serializers import *
+from .filters import RestaurantFilter
 
 
 # Create your views here.
@@ -128,6 +130,8 @@ class RestaurantList(generics.ListCreateAPIView):
 
     queryset = Restaurant.objects.all()
     serializer_class = RestaurantSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = RestaurantFilter
     permission_classes = [IsAuthenticatedOrReadOnly]
 
 

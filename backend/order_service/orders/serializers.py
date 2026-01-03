@@ -149,6 +149,11 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'product', 'order', 'quantity']
         read_only_fields = ['id']
 
+    def validate_quantity(self, value):
+        if value <= 0:
+            raise serializers.ValidationError('Quantity cannot be negative')
+        return value
+
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)

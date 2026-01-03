@@ -1,6 +1,6 @@
 from django.urls import path
 
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import *
 
@@ -19,10 +19,10 @@ urlpatterns = [
 
     # Restaurant paths
     path('restaurants/', RestaurantList.as_view(), name='restaurant-list'),
-    path('restaurants/address/', RestaurantAddressList.as_view(), name='restaurant-address-list'),
-    path('restaurants/<slug:slug>/products/', RestaurantProductList.as_view(), name='restaurant-product-list'),
     path('restaurants/<int:pk>/', RestaurantDetail.as_view(), name='restaurant-detail'),
-    path('restaurants/<int:pk>/address/', RestaurantAddressDetail.as_view(), name='restaurant-address-detail'),
+    path('restaurants/<int:pk>/address/', RestaurantAddressList.as_view(), name='restaurant-address-list'),
+    path('restaurants/<int:pk>/addresses/<int:address_pk>/', RestaurantAddressDetail.as_view(), name='restaurant-address-detail'),
+    path('restaurants/<slug:slug>/products/', RestaurantProductList.as_view(), name='restaurant-product-list'),
 
     # Product paths
     path('products/', ProductList.as_view(), name='product-list'),
@@ -31,6 +31,6 @@ urlpatterns = [
 
     # Order paths
     path('orders/', UserOrdersList.as_view(), name='user-orders'),
-    path('orders/create', CreateOrderView.as_view(), name='create-order'),
+    path('orders/create/', CreateOrderView.as_view(), name='create-order'),
 
 ]
