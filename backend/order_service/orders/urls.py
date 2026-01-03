@@ -22,7 +22,6 @@ urlpatterns = [
     path('restaurants/address/', RestaurantAddressList.as_view(), name='restaurant-address-list'),
     path('restaurants/<slug:slug>/products/', RestaurantProductList.as_view(), name='restaurant-product-list'),
     path('restaurants/<int:pk>/', RestaurantDetail.as_view(), name='restaurant-detail'),
-    path('restaurants/<slug:slug>/', RestaurantDetailBySlug.as_view(), name='restaurant-detail-slug'),
     path('restaurants/<int:pk>/address/', RestaurantAddressDetail.as_view(), name='restaurant-address-detail'),
 
     # Product paths

@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from rest_framework.validators import ValidationError
 
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -8,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from .models import *
 
 
+# ------------------ Address ------------------
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
@@ -15,6 +15,7 @@ class AddressSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+# ------------------ User ------------------
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -53,19 +54,22 @@ class RegisterUserSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
-            raise ValidationError('User with this email already exists')
+            raise serializers.ValidationError('User with this email already exists')
         return value
 
     def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({
-                "password_confirm": "Passwords must match."
-            })
-        return attrs
+        password = attrs.get('password')
+        password_confirm = attrs.get('password_confirm')
 
-    def validate_password(self, value):
-        validate_password(value)
-        return value
+        if password != password_confirm:
+            raise serializers.ValidationError({"password_confirm": "Passwords must match."})
+
+        try:
+            validate_password(password)
+        except serializers.ValidationError as e:
+            raise serializers.ValidationError({"password": list(e.messages)})
+
+        return attrs
 
     def create(self, validated_data):
         validated_data.pop('password_confirm')
@@ -85,19 +89,21 @@ class LoginUserSerializer(serializers.Serializer):
         email = attrs.get('email')
         password = attrs.get('password')
 
-        if email and password:
-            user = authenticate(email=email, password=password)
-            if not user:
-                raise ValidationError({'email': 'Invalid email or password'})
-            if not user.is_active:
-                raise ValidationError('Your account is disabled')
-        else:
-            raise ValidationError({'email': 'Both email and password are required'})
+        if not email or not password:
+            raise serializers.ValidationError({'non_field_errors': 'Both email and password are required'})
+
+        user = authenticate(email=email, password=password)
+
+        if not user:
+            raise serializers.ValidationError({'non_field_errors': 'Invalid email or password'})
+        if not user.is_active:
+            raise serializers.ValidationError({'non_field_errors': 'Your account is disabled'})
 
         attrs['user'] = user
         return attrs
 
 
+# ------------------ RESTAURANTS ------------------
 class RestaurantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Restaurant
@@ -120,6 +126,7 @@ class CreateRestaurantAddressSerializer(serializers.ModelSerializer):
         fields = ['country', 'city', 'zip_code', 'street', 'house_number', 'apartment_number']
 
 
+# ------------------ PRODUCTS ------------------
 class ProductSerializer(serializers.ModelSerializer):
     restaurant_name = serializers.CharField(source='restaurant.name', read_only=True)
 
@@ -128,12 +135,14 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'price', 'restaurant', 'restaurant_name', 'slug']
         read_only_fields = ['id', 'slug', 'restaurant_name']
 
+
     def validate_price(self, value):
         if value <= 0:
-            raise ValidationError('Price cannot be negative')
+            raise serializers.ValidationError('Price cannot be negative')
         return value
 
 
+# ------------------ ORDERS ------------------
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
@@ -162,29 +171,40 @@ class CreateOrderSerializer(serializers.Serializer):
     def validate(self, data):
         restaurant = get_object_or_404(Restaurant, id=data['restaurant_id'])
 
-        for item in data['items']:
-            product = get_object_or_404(Product, id=item['product_id'])
+        product_ids = [item['product_id'] for item in data['items']]
+        products = Product.objects.filter(id__in=product_ids)
+        products_dict = {p.id: p for p in products}
 
+        for item in data['items']:
+            product = products_dict.get(item['product_id'])
+            if not product:
+                raise serializers.ValidationError(f"Product with id {item['product_id']} does not exist")
             if product.restaurant_id != restaurant.id:
-                raise ValidationError('All products must belong to this restaurant')
+                raise serializers.ValidationError(f"All products must belong to restaurant '{restaurant.name}'")
 
         return data
 
     def create(self, validated_data):
         user = self.context['request'].user
-        restaurant = Restaurant.objects.get(id=validated_data['restaurant_id'])
+        restaurant = get_object_or_404(Restaurant, id=validated_data['restaurant_id'])
         items_data = validated_data['items']
+
+        product_ids = [item['product_id'] for item in items_data]
+        products = Product.objects.filter(id__in=product_ids)
+        products_dict = {p.id: p for p in products}
 
         order = Order.objects.create(user=user, restaurant=restaurant, total_price=0)
         total_price = 0
 
+        order_items = []
         for item in items_data:
-            product = Product.objects.get(id=item['product_id'])
+            product = products_dict[item['product_id']]
+            order_item = OrderItem(order=order, product=product, quantity=item['quantity'], price=product.price)
+            order_items.append(order_item)
+            total_price += product.price * item['quantity']
 
-            order_item = OrderItem.objects.create(order=order, product=product, quantity=item['quantity'], price=product.price)
-            total_price += order_item.get_total_price()
+        OrderItem.objects.bulk_create(order_items)
 
         order.total_price = total_price
         order.save(update_fields=['total_price'])
-
         return order
