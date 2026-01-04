@@ -104,13 +104,6 @@ class LoginUserSerializer(serializers.Serializer):
 
 
 # ------------------ RESTAURANTS ------------------
-class RestaurantSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Restaurant
-        fields = ['id', 'name', 'slug']
-        read_only_fields = ['id', 'slug']
-
-
 class RestaurantAddressSerializer(serializers.ModelSerializer):
     address = AddressSerializer(read_only=True)
     restaurant_name = serializers.CharField(source='restaurant.name', read_only=True)
@@ -126,6 +119,24 @@ class CreateRestaurantAddressSerializer(serializers.ModelSerializer):
         fields = ['country', 'city', 'zip_code', 'street', 'house_number', 'apartment_number']
 
 
+class RestaurantSerializer(serializers.ModelSerializer):
+    addresses = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Restaurant
+        fields = ['id', 'name', 'slug', 'addresses']
+        read_only_fields = ['id', 'slug']
+
+    def get_addresses(self, obj):
+        request = self.context.get('request')
+        city = request.query_params.get('city') if request else None
+
+        qs = obj.restaurantaddress_set.all()
+        if city:
+            qs = qs.filter(address__city__iexact=city)
+        return RestaurantAddressSerializer(qs, many=True).data
+
+
 # ------------------ PRODUCTS ------------------
 class ProductSerializer(serializers.ModelSerializer):
     restaurant_name = serializers.CharField(source='restaurant.name', read_only=True)
@@ -134,7 +145,6 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ['id', 'name', 'price', 'restaurant', 'restaurant_name', 'slug']
         read_only_fields = ['id', 'slug', 'restaurant_name']
-
 
     def validate_price(self, value):
         if value <= 0:

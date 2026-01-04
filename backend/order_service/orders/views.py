@@ -47,6 +47,16 @@ class UserAddressDetail(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return UserAddress.objects.filter(user=self.request.user)
 
+    def perform_update(self, serializer):
+        address = self.get_object().address
+        address_serializer = AddressSerializer(
+            address,
+            data=self.request.data.get('address', {}),
+            partial=True
+        )
+        address_serializer.is_valid(raise_exception=True)
+        address_serializer.save()
+
     def perform_destroy(self, instance):
         instance.address.delete()
         instance.delete()
