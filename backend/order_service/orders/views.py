@@ -158,25 +158,23 @@ class RestaurantAddressList(generics.ListCreateAPIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        restaurant_id = self.request.query_params.get('restaurant')
-        queryset = RestaurantAddress.objects.all()
-
-        if restaurant_id:
-            queryset = queryset.filter(restaurant_id=restaurant_id)
-        return queryset
-
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return CreateRestaurantAddressSerializer
         return RestaurantAddressSerializer
 
+    def get_queryset(self):
+        return RestaurantAddress.objects.filter(
+            restaurant_id=self.kwargs['pk']
+        )
+
     def perform_create(self, serializer):
         address = serializer.save()
-        restaurant_id = self.request.data.get('restaurant')
-        restaurant = get_object_or_404(Restaurant, pk=restaurant_id)
-        RestaurantAddress.objects.create(restaurant=restaurant, address=address)
 
+        RestaurantAddress.objects.create(
+            restaurant_id=self.kwargs['pk'],
+            address=address
+        )
 
 class RestaurantAddressDetail(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update, or delete a restaurant address."""
