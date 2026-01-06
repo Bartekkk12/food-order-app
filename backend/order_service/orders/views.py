@@ -176,12 +176,18 @@ class RestaurantAddressList(generics.ListCreateAPIView):
             address=address
         )
 
+
 class RestaurantAddressDetail(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update, or delete a restaurant address."""
 
     queryset = RestaurantAddress.objects.all()
     serializer_class = RestaurantAddressSerializer
     permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_object(self):
+        address_pk = self.kwargs['address_pk']
+        return get_object_or_404(RestaurantAddress, pk=address_pk)
 
     def perform_update(self, serializer):
         address = self.get_object().address

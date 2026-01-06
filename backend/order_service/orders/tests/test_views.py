@@ -288,3 +288,57 @@ class RestaurantAddressListTestCase(BaseConfig):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Address.objects.filter(city='Gdansk').exists())
+
+
+class RestaurantAddressDetailTestCase(BaseConfig):
+    def setUp(self):
+        super().setUp()
+
+        self.restaurant_address = RestaurantAddress.objects.create(
+            restaurant=self.restaurant1,
+            address=self.address
+        )
+
+        self.url = reverse(
+            'restaurant-address-detail',
+            kwargs={
+                'pk': self.restaurant1.id,
+                'address_pk': self.restaurant_address.id
+            }
+        )
+
+    def authenticate(self):
+        self.client.force_authenticate(user=self.user)
+
+    def test_get_restaurant_address_authenticated(self):
+        self.authenticate()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], self.restaurant_address.id)
+        self.assertEqual(response.data['address']['city'], self.address.city)
+
+    def test_get_restaurant_address_unauthenticated(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_update_restaurant_address(self):
+        self.authenticate()
+        data = {
+            'city': 'Warszawa',
+            'street': 'Nowa'
+        }
+        response = self.client.patch(self.url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.address.refresh_from_db()
+        self.assertEqual(self.address.city, 'Warszawa')
+        self.assertEqual(self.address.street, 'Nowa')
+
+    def test_delete_restaurant_address(self):
+        self.authenticate()
+
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(RestaurantAddress.objects.filter(id=self.restaurant_address.id).exists())
+        self.assertFalse(Address.objects.filter(id=self.address.id).exists())
