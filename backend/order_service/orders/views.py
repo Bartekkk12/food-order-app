@@ -8,15 +8,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import *
 from .serializers import *
 from .filters import RestaurantFilter
 
-
-# Create your views here.
+from order_consumer.producer import send_payment_message
 
 
 class UserAddressList(generics.ListCreateAPIView):
@@ -261,9 +258,15 @@ class UserOrdersList(generics.ListAPIView):
 
 class CreateOrderView(generics.CreateAPIView):
     """Create a new order."""
-
     serializer_class = CreateOrderSerializer
     permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        order = serializer.save()
+
+        send_payment_message(order.id, order.total_price)
+
+        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)

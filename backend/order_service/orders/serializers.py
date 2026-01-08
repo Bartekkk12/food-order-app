@@ -156,8 +156,7 @@ class ProductSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'order', 'quantity']
-        read_only_fields = ['id']
+        fields = ['product', 'quantity', 'price']
 
     def validate_quantity(self, value):
         if value <= 0:
@@ -166,12 +165,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    items = OrderItemSerializer(many=True, read_only=True)
+    products = OrderItemSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
-        fields = ['id', 'user', 'items', 'total_price']
-        read_only_fields = ['id', 'user', 'total_price']
+        fields = ['id', 'user', 'restaurant', 'products', 'total_price', 'status', 'created_at']
+        read_only_fields = fields
 
 
 class CreateOrderItemSerializer(serializers.Serializer):
@@ -183,43 +182,34 @@ class CreateOrderSerializer(serializers.Serializer):
     restaurant_id = serializers.IntegerField()
     items = CreateOrderItemSerializer(many=True)
 
-    def validate(self, data):
-        restaurant = get_object_or_404(Restaurant, id=data['restaurant_id'])
-
-        product_ids = [item['product_id'] for item in data['items']]
-        products = Product.objects.filter(id__in=product_ids)
-        products_dict = {p.id: p for p in products}
-
-        for item in data['items']:
-            product = products_dict.get(item['product_id'])
-            if not product:
-                raise serializers.ValidationError(f"Product with id {item['product_id']} does not exist")
-            if product.restaurant_id != restaurant.id:
-                raise serializers.ValidationError(f"All products must belong to restaurant '{restaurant.name}'")
-
-        return data
-
     def create(self, validated_data):
         user = self.context['request'].user
         restaurant = get_object_or_404(Restaurant, id=validated_data['restaurant_id'])
-        items_data = validated_data['items']
 
-        product_ids = [item['product_id'] for item in items_data]
-        products = Product.objects.filter(id__in=product_ids)
-        products_dict = {p.id: p for p in products}
+        order = Order.objects.create(
+            user=user,
+            restaurant=restaurant,
+            total_price=0
+        )
 
-        order = Order.objects.create(user=user, restaurant=restaurant, total_price=0)
         total_price = 0
-
         order_items = []
-        for item in items_data:
-            product = products_dict[item['product_id']]
-            order_item = OrderItem(order=order, product=product, quantity=item['quantity'], price=product.price)
-            order_items.append(order_item)
-            total_price += product.price * item['quantity']
+
+        for item in validated_data['items']:
+            product = Product.objects.get(id=item['product_id'])
+            quantity = item['quantity']
+            total_price += product.price * quantity
+
+            order_items.append(OrderItem(
+                order=order,
+                product=product,
+                quantity=quantity,
+                price=product.price
+            ))
 
         OrderItem.objects.bulk_create(order_items)
 
         order.total_price = total_price
-        order.save(update_fields=['total_price'])
+        order.save()
+
         return order

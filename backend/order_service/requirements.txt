@@ -7,3 +7,5 @@ psycopg==3.2.13
 PyJWT==2.10.1
 sqlparse==0.5.4
 typing_extensions==4.15.0
+kombu
+pika
