@@ -4,7 +4,6 @@ import json
 
 
 def process_payment(order_id, total_price):
-    """Simulates a payment process"""
     print(f"[x] Processing payment for order {order_id}")
     time.sleep(3)
     print(f"[✓] Payment for order {order_id} succeeded")
@@ -48,7 +47,7 @@ def send_payment_success(order_id):
         routing_key="delivery_queue",
         body=json.dumps(delivery_message),
         properties=pika.BasicProperties(
-            delivery_mode=2,
+            delivery_mode=2,  # Make message persistent
         )
     )
     print(f"[+] Sent delivery request for order {order_id}")

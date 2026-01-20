@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   order_service:
     build:
@@ -16,10 +14,15 @@ services:
       db:
         condition: service_healthy
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
     environment:
       - PYTHONPATH=/app
     command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   order_consumer:
     build:
@@ -37,7 +40,8 @@ services:
         condition: service_healthy
     environment:
       - PYTHONPATH=/app
-    command: sh -c "python order_consumer/consumer.py"
+      - DJANGO_SETTINGS_MODULE=order_service.settings
+    command: sh -c "python manage.py migrate && python order_consumer/consumer.py"
 
   payment_service:
     build:
@@ -53,9 +57,16 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      db:
+        condition: service_healthy
     environment:
       - PYTHONPATH=/app
     command: sh -c "sleep 10 && python app.py"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   db:
     image: postgres:17
@@ -67,7 +78,78 @@ services:
     volumes:
       - postgres_db:/var/lib/postgresql/data/
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 -p 5432" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 -p 5432"]
+      interval: 5s
+      retries: 10
+      timeout: 5s
+
+  delivery_service:
+    build:
+      context: ./backend/delivery_service
+      dockerfile: Dockerfile
+    container_name: delivery_service
+    ports:
+      - "8003:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./backend/delivery_service:/app
+    depends_on:
+      delivery_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - PYTHONPATH=/app
+      - DB_HOST=delivery_db
+      - DB_PORT=5432
+      - POSTGRES_DB=delivery_db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  delivery_consumer:
+    build:
+      context: ./backend/delivery_service
+      dockerfile: Dockerfile
+    container_name: delivery_consumer
+    env_file:
+      - .env
+    volumes:
+      - ./backend/delivery_service:/app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      delivery_service:
+        condition: service_healthy
+    environment:
+      - PYTHONPATH=/app
+      - DJANGO_SETTINGS_MODULE=delivery_service.settings
+      - DB_HOST=delivery_db
+      - DB_PORT=5432
+      - POSTGRES_DB=delivery_db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    command: python delivery_consumer/consumer.py
+
+  delivery_db:
+    image: postgres:17
+    container_name: delivery_db
+    environment:
+      - POSTGRES_DB=delivery_db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - delivery_postgres_db:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d delivery_db -h 127.0.0.1 -p 5432"]
       interval: 5s
       retries: 10
       timeout: 5s
@@ -82,10 +164,26 @@ services:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
     healthcheck:
-      test: [ "CMD-SHELL", "rabbitmqctl status" ]
+      test: ["CMD-SHELL", "rabbitmqctl status"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    depends_on:
+      - db
+      - delivery_db
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
 volumes:
   postgres_db:
+  delivery_postgres_db:
+  pgadmin_data:

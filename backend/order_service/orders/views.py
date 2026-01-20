@@ -20,7 +20,7 @@ class UserAddressList(generics.ListCreateAPIView):
     """List all addresses for the authenticated user or create a new address."""
 
     serializer_class = UserAddressSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # Allow internal service calls
 
     def get_queryset(self):
         user_id = self.kwargs.get('pk')
