@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 
 
 class PasswordValidator:
+    """Validates that the password entered is a valid password."""
     def validate(self, password, user=None):
         if not re.search(r'[A-Z]', password):
             raise ValidationError("Password must contain at least one uppercase letter.")

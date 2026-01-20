@@ -20,10 +20,15 @@ class UserAddressList(generics.ListCreateAPIView):
     """List all addresses for the authenticated user or create a new address."""
 
     serializer_class = UserAddressSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
-        return UserAddress.objects.filter(user=self.request.user)
+        user_id = self.kwargs.get('pk')
+        if user_id:
+            return UserAddress.objects.filter(user_id=user_id)
+        if self.request.user.is_authenticated:
+            return UserAddress.objects.filter(user=self.request.user)
+        return UserAddress.objects.none()
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -254,6 +259,14 @@ class UserOrdersList(generics.ListAPIView):
 
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
+
+
+class OrderDetailView(generics.RetrieveAPIView):
+    """Retrieve order details - for internal service communication (no auth required)"""
+    
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [AllowAny]
 
 
 class CreateOrderView(generics.CreateAPIView):

@@ -7,6 +7,7 @@ from .views import *
 urlpatterns = [
     # User paths
     path('users/', UserList.as_view(), name='user-list'),
+    path('users/<int:pk>/addresses/', UserAddressList.as_view(), name='user-addresses-by-id'),
     path('users/addresses/', UserAddressList.as_view(), name='user-address-list'),
     path('users/addresses/<int:pk>/', UserAddressDetail.as_view(), name='user-address-detail'),
 
@@ -31,6 +32,7 @@ urlpatterns = [
 
     # Order paths
     path('orders/', UserOrdersList.as_view(), name='user-orders'),
+    path('orders/<int:pk>/', OrderDetailView.as_view(), name='order-detail'),
     path('orders/create/', CreateOrderView.as_view(), name='create-order'),
 
 ]

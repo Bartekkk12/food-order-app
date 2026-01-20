@@ -21,12 +21,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-t0i-i+(gva38uqj(hj=!p0cby_tr$0gz@bwo#)3dx!md=(m4%h'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key-for-development-only')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
+
+# Disable host header validation for Docker inter-service communication
+SILENCED_SYSTEM_CHECKS = ['security.W001']
+
+# CSRF trusted origins for admin panel
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8001',
+    'http://127.0.0.1:8001',
+]
 
 AUTH_USER_MODEL = 'orders.User'
 
@@ -63,6 +72,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'order_service.middleware.DisableHostCheckMiddleware',  # Allow Docker hostnames
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
